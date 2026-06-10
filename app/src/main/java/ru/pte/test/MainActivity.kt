@@ -34,14 +34,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -72,6 +75,7 @@ private val GREEN = Color(0xFF0B6E4F)
 private val RED = Color(0xFFB3261E)
 
 private sealed interface Screen {
+    data object Splash : Screen
     data object Home : Screen
     data object TicketList : Screen
     data class Ticket(val number: Int) : Screen
@@ -81,8 +85,9 @@ private sealed interface Screen {
 
 @Composable
 private fun App() {
-    var screen by remember { mutableStateOf<Screen>(Screen.Home) }
+    var screen by remember { mutableStateOf<Screen>(Screen.Splash) }
     when (val s = screen) {
+        Screen.Splash -> SplashScreen(onEnter = { screen = Screen.Home })
         Screen.Home -> HomeScreen(
             onTickets = { screen = Screen.TicketList },
             onHistory = { screen = Screen.History },
@@ -101,6 +106,128 @@ private fun App() {
         Screen.Search -> SearchScreen(onBack = { screen = Screen.Home })
     }
 }
+
+private val BOOK_BLUE = Color(0xFF1565C0)   // ПТЭ
+private val BOOK_GREEN = Color(0xFF2E7D32)  // ИСИ
+private val BOOK_ORANGE = Color(0xFFEF6C00) // ИДП
+
+@Composable
+private fun SplashScreen(onEnter: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            "Подготовка к аттестации",
+            fontSize = 16.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "ПТЭ · ИСИ · ИДП",
+            fontSize = 26.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(40.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            Book("ПТЭ", "Правила\nтехнической\nэксплуатации", BOOK_BLUE, height = 168.dp, delayMs = 0)
+            Spacer(Modifier.width(14.dp))
+            Book("ИСИ", "Инструкция\nпо сигнализации", BOOK_GREEN, height = 188.dp, delayMs = 140)
+            Spacer(Modifier.width(14.dp))
+            Book("ИДП", "Инструкция\nпо движению\nпоездов", BOOK_ORANGE, height = 150.dp, delayMs = 280)
+        }
+        Spacer(Modifier.height(48.dp))
+        Button(
+            onClick = onEnter,
+            modifier = Modifier.fillMaxWidth(0.8f).height(56.dp),
+        ) {
+            Text("Начать подготовку", fontSize = 17.sp)
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            "Самоподготовка по нормативам железнодорожного транспорта",
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Книга-«корешок» на стартовом экране: цветной том с тиснёной аббревиатурой. */
+@Composable
+private fun Book(abbr: String, title: String, color: Color, height: Dp, delayMs: Int) {
+    // Появление: книга «вырастает» снизу с лёгким отскоком.
+    val grow = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        delay(delayMs.toLong())
+        grow.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+    }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier
+                .width(78.dp)
+                .height(height * grow.value)
+                .shadow(8.dp, RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp,
+                    topEnd = 10.dp, bottomEnd = 10.dp))
+                .background(color, RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp,
+                    topEnd = 10.dp, bottomEnd = 10.dp)),
+        ) {
+            // Корешок книги — более тёмная полоса слева.
+            Box(
+                Modifier
+                    .fillMaxHeight()
+                    .width(12.dp)
+                    .background(color.darker(),
+                        RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp)),
+            )
+            // Срез страниц справа.
+            Box(
+                Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .width(6.dp)
+                    .padding(vertical = 6.dp)
+                    .background(Color(0xFFF1ECE0)),
+            )
+            // Декоративная рамка тиснения по высоте обложки.
+            Box(
+                Modifier
+                    .align(Alignment.Center)
+                    .padding(start = 16.dp, end = 10.dp, top = 12.dp, bottom = 12.dp)
+                    .fillMaxSize()
+                    .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(4.dp)),
+            )
+            // Аббревиатура на обложке.
+            if (grow.value > 0.7f) {
+                Text(
+                    abbr,
+                    Modifier.align(Alignment.Center),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                )
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            title,
+            fontSize = 10.sp,
+            lineHeight = 12.sp,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Затемнённый вариант цвета — для корешка книги. */
+private fun Color.darker(factor: Float = 0.75f) =
+    Color(red * factor, green * factor, blue * factor, alpha)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
