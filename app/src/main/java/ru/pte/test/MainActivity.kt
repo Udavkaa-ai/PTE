@@ -281,19 +281,66 @@ private fun OptionCard(text: String, state: OptState, enabled: Boolean, onClick:
     }
 }
 
+/** Запись поискового индекса: вопрос + нормализованные поля для поиска. */
+private class SearchEntry(
+    val q: Question,
+    val title: String,
+    val answers: String,
+)
+
+/** Приводит строку к нижнему регистру и унифицирует «ё» → «е» для поиска. */
+private fun normalizeForSearch(s: String): String =
+    s.lowercase().replace('ё', 'е')
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SearchScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val all = remember { QuestionRepository.unique(context) }
+    // Предварительно строим поисковый индекс: нормализованный текст вопроса и
+    // отдельно весь текст вариантов ответа — чтобы искать контекстно по всему.
+    val index = remember(all) {
+        all.map { q ->
+            SearchEntry(
+                q = q,
+                title = normalizeForSearch(q.text),
+                answers = normalizeForSearch(q.options.joinToString(" ")),
+            )
+        }
+    }
     var query by remember { mutableStateOf("") }
     var openQuestion by remember { mutableStateOf<Question?>(null) }
 
-    val results = remember(query) {
-        val q = query.trim().lowercase()
-        if (q.length < 2) emptyList()
-        else all.filter { it.text.lowercase().contains(q) ||
-            it.options.any { o -> o.lowercase().contains(q) } }.take(60)
+    val results = remember(query, index) {
+        val raw = normalizeForSearch(query.trim())
+        if (raw.length < 2) emptyList()
+        else {
+            // Контекстный поиск: каждое слово запроса должно встретиться где-то
+            // в тексте вопроса или в любом из вариантов ответа (порядок не важен).
+            val tokens = raw.split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length >= 2 }
+            if (tokens.isEmpty()) emptyList()
+            else index
+                .mapNotNull { e ->
+                    var score = 0
+                    var allMatched = true
+                    for (t in tokens) {
+                        val inTitle = e.title.contains(t)
+                        val inAnswers = e.answers.contains(t)
+                        if (!inTitle && !inAnswers) { allMatched = false; break }
+                        if (inTitle) score += 3
+                        if (inAnswers) score += 1
+                    }
+                    if (!allMatched) return@mapNotNull null
+                    // Бонусы за точные совпадения целой фразы.
+                    if (e.title.contains(raw)) score += 8
+                    else if (e.answers.contains(raw)) score += 4
+                    if (e.title.startsWith(raw)) score += 4
+                    e.q to score
+                }
+                .sortedByDescending { it.second }
+                .map { it.first }
+                .take(60)
+        }
     }
 
     Scaffold(
@@ -323,7 +370,8 @@ private fun SearchScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             if (query.trim().length < 2) {
                 Text(
-                    "Начните вводить текст вопроса — будут показаны совпадения и правильные ответы.",
+                    "Введите любые слова из вопроса или ответа — порядок не важен. " +
+                        "Поиск идёт по всему тексту вопросов и вариантов ответов.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                 )
