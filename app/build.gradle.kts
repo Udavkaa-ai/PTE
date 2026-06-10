@@ -11,12 +11,29 @@ android {
         applicationId = "ru.pte.test"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 3
+        versionName = "1.2"
+    }
+
+    signingConfigs {
+        // Фиксированный ключ в репозитории: каждая сборка подписывается одним и
+        // тем же сертификатом, поэтому APK всегда ставится как обновление поверх
+        // предыдущего (без удаления). Ключ несекретный — приложение раздаётся
+        // сайдлоадом для самоподготовки.
+        create("stable") {
+            storeFile = file("pte.keystore")
+            storePassword = "ptetest"
+            keyAlias = "pte"
+            keyPassword = "ptetest"
+        }
     }
 
     buildTypes {
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("stable")
+        }
         release {
+            signingConfig = signingConfigs.getByName("stable")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

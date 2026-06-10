@@ -48,7 +48,7 @@ object QuestionRepository {
         }
     }
 
-    /** Уникальные вопросы (без повторов) — для режима поиска. */
+    /** Уникальные вопросы (без повторов) — для режима поиска и билетов. */
     fun unique(context: Context): List<Question> {
         val seen = HashSet<String>()
         val result = ArrayList<Question>()
@@ -57,5 +57,31 @@ object QuestionRepository {
             if (seen.add(key)) result.add(q)
         }
         return result
+    }
+}
+
+/** Размер одного билета. */
+const val TICKET_SIZE = 20
+
+/** Генерация экзаменационных билетов из уникальных вопросов. */
+object Tickets {
+    /** Сколько билетов доступно (каждый по [TICKET_SIZE] вопросов). */
+    fun count(context: Context): Int {
+        val n = QuestionRepository.unique(context).size
+        if (n == 0) return 0
+        return ((n + TICKET_SIZE - 1) / TICKET_SIZE).coerceAtLeast(1)
+    }
+
+    /**
+     * Вопросы билета [ticket] (нумерация с 1). Набор фиксирован (seed = номер
+     * билета), вопросы внутри билета не повторяются. При нехватке уникальных
+     * вопросов билет дополняется другими, но без повторов внутри билета.
+     */
+    fun questions(context: Context, ticket: Int): List<Question> {
+        val pool = QuestionRepository.unique(context)
+        if (pool.isEmpty()) return emptyList()
+        val rnd = java.util.Random(ticket.toLong() * 1000003L + 17L)
+        val shuffled = pool.toMutableList().apply { shuffle(rnd) }
+        return shuffled.take(TICKET_SIZE.coerceAtMost(shuffled.size))
     }
 }
