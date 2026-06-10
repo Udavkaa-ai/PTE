@@ -96,14 +96,24 @@ object PteDoc {
             if (score > bestScore) { bestScore = score; bestIdx = i }
         }
         if (bestIdx >= 0) {
-            val cl = blocks[bestIdx].clause
+            // Привязываемся к началу пункта (с номером), а не к середине абзаца —
+            // чтобы подсветка всегда была у заголовка пункта.
+            val startIdx = clauseStart(blocks, bestIdx, part)
+            val cl = blocks[startIdx].clause
             val label = if (cl != null) "$partName, п. $cl" else partName
-            return DocTarget(bestIdx, highlightEnd(blocks, bestIdx), label)
+            return DocTarget(startIdx, highlightEnd(blocks, startIdx), label)
         }
 
         // 3) Фолбэк — начало нужной части.
         val start = blocks.indexOfFirst { it.part == part }.coerceAtLeast(0)
         return DocTarget(start, start + 1, partName)
+    }
+
+    /** Возвращает индекс начала пункта (с номером), к которому относится абзац. */
+    private fun clauseStart(blocks: List<DocBlock>, idx: Int, part: String): Int {
+        var i = idx
+        while (i > 0 && blocks[i].clause == null && blocks[i].part == part) i--
+        return if (blocks[i].part == part && blocks[i].clause != null) i else idx
     }
 
     /** Конец подсветки — до следующего пункта в той же части. */

@@ -139,11 +139,11 @@ private fun SplashScreen(onEnter: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.Bottom,
         ) {
-            Book("ПТЭ", "Правила\nтехнической\nэксплуатации", BOOK_BLUE, height = 168.dp, delayMs = 0)
-            Spacer(Modifier.width(14.dp))
-            Book("ИСИ", "Инструкция\nпо сигнализации", BOOK_GREEN, height = 188.dp, delayMs = 140)
-            Spacer(Modifier.width(14.dp))
-            Book("ИДП", "Инструкция\nпо движению\nпоездов", BOOK_ORANGE, height = 150.dp, delayMs = 280)
+            Book("ПТЭ", "Правила\nтехнической\nэксплуатации", BOOK_BLUE, height = 128.dp, delayMs = 0)
+            Spacer(Modifier.width(12.dp))
+            Book("ИСИ", "Инструкция\nпо сигнализации", BOOK_GREEN, height = 138.dp, delayMs = 140)
+            Spacer(Modifier.width(12.dp))
+            Book("ИДП", "Инструкция\nпо движению\nпоездов", BOOK_ORANGE, height = 122.dp, delayMs = 280)
         }
         // Книжная полка.
         Box(
@@ -182,7 +182,7 @@ private fun Book(abbr: String, title: String, color: Color, height: Dp, delayMs:
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             Modifier
-                .width(82.dp)
+                .width(104.dp)
                 .height(height * grow.value),
         ) {
             // Блок страниц — кремовый, выглядывает справа и снизу (толщина книги).
@@ -233,13 +233,13 @@ private fun Book(abbr: String, title: String, color: Color, height: Dp, delayMs:
                             .fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        Box(Modifier.width(34.dp).height(2.dp)
+                        Box(Modifier.width(46.dp).height(2.dp)
                             .background(Color.White.copy(alpha = 0.55f)))
                         Spacer(Modifier.height(8.dp))
                         Text(abbr, color = Color.White,
-                            fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                            fontWeight = FontWeight.Bold, fontSize = 22.sp)
                         Spacer(Modifier.height(8.dp))
-                        Box(Modifier.width(34.dp).height(2.dp)
+                        Box(Modifier.width(46.dp).height(2.dp)
                             .background(Color.White.copy(alpha = 0.55f)))
                     }
                 }
@@ -956,9 +956,9 @@ private fun PteReaderScreen(question: Question, onBack: () -> Unit) {
     val blocks = remember { PteDoc.load(context) }
     val target = remember(question) { PteDoc.resolve(context, question) }
     val listState = rememberLazyListState()
-    // Прокручиваем к нужному пункту, оставив пару абзацев контекста сверху.
+    // Прокручиваем к нужному пункту, оставив один абзац контекста сверху.
     LaunchedEffect(target) {
-        listState.scrollToItem((target.index - 2).coerceAtLeast(0))
+        listState.scrollToItem((target.index - 1).coerceAtLeast(0))
     }
     Scaffold(
         topBar = {
