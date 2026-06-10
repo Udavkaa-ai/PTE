@@ -19,6 +19,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -28,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -142,7 +145,13 @@ private fun SplashScreen(onEnter: () -> Unit) {
             Spacer(Modifier.width(14.dp))
             Book("ИДП", "Инструкция\nпо движению\nпоездов", BOOK_ORANGE, height = 150.dp, delayMs = 280)
         }
-        Spacer(Modifier.height(48.dp))
+        // Книжная полка.
+        Box(
+            Modifier.fillMaxWidth(0.82f).height(10.dp)
+                .shadow(4.dp, RoundedCornerShape(3.dp))
+                .background(Color(0xFF8D6E55), RoundedCornerShape(3.dp)),
+        )
+        Spacer(Modifier.height(40.dp))
         Button(
             onClick = onEnter,
             modifier = Modifier.fillMaxWidth(0.8f).height(56.dp),
@@ -159,7 +168,7 @@ private fun SplashScreen(onEnter: () -> Unit) {
     }
 }
 
-/** Книга-«корешок» на стартовом экране: цветной том с тиснёной аббревиатурой. */
+/** Книга на стартовом экране: обложка, корешок, видимый обрез страниц. */
 @Composable
 private fun Book(abbr: String, title: String, color: Color, height: Dp, delayMs: Int) {
     // Появление: книга «вырастает» снизу с лёгким отскоком.
@@ -168,53 +177,75 @@ private fun Book(abbr: String, title: String, color: Color, height: Dp, delayMs:
         delay(delayMs.toLong())
         grow.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
     }
+    val coverShape = RoundedCornerShape(topStart = 3.dp, bottomStart = 3.dp,
+        topEnd = 7.dp, bottomEnd = 7.dp)
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             Modifier
-                .width(78.dp)
-                .height(height * grow.value)
-                .shadow(8.dp, RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp,
-                    topEnd = 10.dp, bottomEnd = 10.dp))
-                .background(color, RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp,
-                    topEnd = 10.dp, bottomEnd = 10.dp)),
+                .width(82.dp)
+                .height(height * grow.value),
         ) {
-            // Корешок книги — более тёмная полоса слева.
+            // Блок страниц — кремовый, выглядывает справа и снизу (толщина книги).
             Box(
                 Modifier
-                    .fillMaxHeight()
-                    .width(12.dp)
-                    .background(color.darker(),
-                        RoundedCornerShape(topStart = 6.dp, bottomStart = 6.dp)),
-            )
-            // Срез страниц справа.
-            Box(
-                Modifier
-                    .align(Alignment.CenterEnd)
-                    .fillMaxHeight()
-                    .width(6.dp)
-                    .padding(vertical = 6.dp)
-                    .background(Color(0xFFF1ECE0)),
-            )
-            // Декоративная рамка тиснения по высоте обложки.
-            Box(
-                Modifier
-                    .align(Alignment.Center)
-                    .padding(start = 16.dp, end = 10.dp, top = 12.dp, bottom = 12.dp)
                     .fillMaxSize()
-                    .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(4.dp)),
-            )
-            // Аббревиатура на обложке.
-            if (grow.value > 0.7f) {
-                Text(
-                    abbr,
-                    Modifier.align(Alignment.Center),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                )
+                    .padding(start = 9.dp, top = 7.dp)
+                    .background(Color(0xFFF3EEDF),
+                        RoundedCornerShape(topStart = 2.dp, bottomStart = 2.dp,
+                            topEnd = 8.dp, bottomEnd = 8.dp)),
+            ) {
+                // Тонкие линии-страницы на обрезе.
+                Column(
+                    Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(7.dp)
+                        .padding(vertical = 8.dp),
+                    verticalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    repeat(if (height.value > 170) 7 else 6) {
+                        Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFCFC7B2)))
+                    }
+                }
+            }
+            // Обложка.
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(end = 7.dp, bottom = 5.dp)
+                    .shadow(6.dp, coverShape)
+                    .background(color, coverShape),
+            ) {
+                // Корешок — тёмная полоса слева с тиснёной линией.
+                Box(
+                    Modifier.fillMaxHeight().width(13.dp)
+                        .background(color.darker(),
+                            RoundedCornerShape(topStart = 3.dp, bottomStart = 3.dp)),
+                ) {
+                    Box(
+                        Modifier.align(Alignment.Center).fillMaxHeight()
+                            .padding(vertical = 10.dp).width(1.5.dp)
+                            .background(Color.White.copy(alpha = 0.3f)),
+                    )
+                }
+                // Тиснёная рамка + название на обложке.
+                if (grow.value > 0.7f) {
+                    Column(
+                        Modifier.align(Alignment.Center)
+                            .padding(start = 18.dp, end = 10.dp)
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Box(Modifier.width(34.dp).height(2.dp)
+                            .background(Color.White.copy(alpha = 0.55f)))
+                        Spacer(Modifier.height(8.dp))
+                        Text(abbr, color = Color.White,
+                            fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Box(Modifier.width(34.dp).height(2.dp)
+                            .background(Color.White.copy(alpha = 0.55f)))
+                    }
+                }
             }
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
             title,
             fontSize = 10.sp,
@@ -375,6 +406,13 @@ private fun TicketScreen(ticket: Int, onBack: () -> Unit, onHome: () -> Unit) {
     var showPopup by remember { mutableStateOf(false) }
     var correctCount by remember { mutableStateOf(0) }
     var finished by remember { mutableStateOf(false) }
+    var readerQuestion by remember { mutableStateOf<Question?>(null) }
+
+    // Читалка норматива поверх билета.
+    readerQuestion?.let { rq ->
+        PteReaderScreen(rq, onBack = { readerQuestion = null })
+        return
+    }
 
     // Завершение билета — сохраняем результат в историю один раз.
     LaunchedEffect(finished) {
@@ -484,6 +522,7 @@ private fun TicketScreen(ticket: Int, onBack: () -> Unit, onHome: () -> Unit) {
             reference = q.reference,
             correctText = q.options.getOrElse(q.correct) { "—" },
             isLast = isLast,
+            onRead = { showPopup = false; readerQuestion = q },
             onNext = {
                 if (isLast) finished = true
                 else { index++; selected = -1; checked = false }
@@ -500,6 +539,7 @@ private fun ResultPopup(
     reference: String,
     correctText: String,
     isLast: Boolean,
+    onRead: () -> Unit,
     onNext: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -557,6 +597,12 @@ private fun ResultPopup(
                             fontSize = 14.sp,
                         )
                     }
+                }
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(onClick = onRead, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.MenuBook, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Читать в ПТЭ")
                 }
             }
         },
@@ -762,6 +808,12 @@ private fun SearchScreen(onBack: () -> Unit) {
     }
     var query by remember { mutableStateOf("") }
     var openQuestion by remember { mutableStateOf<Question?>(null) }
+    var readerQuestion by remember { mutableStateOf<Question?>(null) }
+
+    readerQuestion?.let { rq ->
+        PteReaderScreen(rq, onBack = { readerQuestion = null })
+        return
+    }
 
     val results = remember(query, index) {
         val raw = normalizeForSearch(query.trim())
@@ -847,15 +899,26 @@ private fun SearchScreen(onBack: () -> Unit) {
     }
 
     openQuestion?.let { q ->
-        AnswerDialog(q) { openQuestion = null }
+        AnswerDialog(
+            q,
+            onRead = { openQuestion = null; readerQuestion = q },
+            onDismiss = { openQuestion = null },
+        )
     }
 }
 
 @Composable
-private fun AnswerDialog(q: Question, onDismiss: () -> Unit) {
+private fun AnswerDialog(q: Question, onRead: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Закрыть") } },
+        confirmButton = {
+            Button(onClick = onRead) {
+                Icon(Icons.Default.MenuBook, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Читать в ПТЭ")
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Закрыть") } },
         title = { Text("Ответ", fontWeight = FontWeight.Bold) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -884,6 +947,101 @@ private fun AnswerDialog(q: Question, onDismiss: () -> Unit) {
             }
         },
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PteReaderScreen(question: Question, onBack: () -> Unit) {
+    val context = LocalContext.current
+    val blocks = remember { PteDoc.load(context) }
+    val target = remember(question) { PteDoc.resolve(context, question) }
+    val listState = rememberLazyListState()
+    // Прокручиваем к нужному пункту, оставив пару абзацев контекста сверху.
+    LaunchedEffect(target) {
+        listState.scrollToItem((target.index - 2).coerceAtLeast(0))
+    }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("Чтение норматива", fontSize = 16.sp)
+                        Text(
+                            target.label,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад")
+                    }
+                },
+                colors = barColors(),
+            )
+        }
+    ) { pad ->
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.padding(pad).fillMaxSize().padding(horizontal = 14.dp),
+        ) {
+            item { Spacer(Modifier.height(8.dp)) }
+            itemsIndexed(blocks) { i, b ->
+                val highlighted = i >= target.index && i < target.highlightEnd
+                val header = isDocHeader(b)
+                if (highlighted) {
+                    Surface(
+                        color = Color(0xFFFFF4CC),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                    ) {
+                        Row(Modifier.height(IntrinsicSize.Min)) {
+                            Box(
+                                Modifier.width(4.dp).fillMaxHeight()
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                            Text(
+                                b.text,
+                                Modifier.padding(10.dp),
+                                fontSize = 14.sp,
+                                fontWeight = if (b.clause != null) FontWeight.SemiBold else FontWeight.Normal,
+                                lineHeight = 20.sp,
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        b.text,
+                        Modifier.fillMaxWidth().padding(vertical = if (header) 10.dp else 4.dp),
+                        fontSize = if (header) 15.sp else 14.sp,
+                        fontWeight = when {
+                            header -> FontWeight.Bold
+                            b.clause != null -> FontWeight.Medium
+                            else -> FontWeight.Normal
+                        },
+                        color = if (header) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                        textAlign = if (header) TextAlign.Center else TextAlign.Start,
+                        lineHeight = 20.sp,
+                    )
+                }
+            }
+            item { Spacer(Modifier.height(48.dp)) }
+        }
+    }
+}
+
+/** Эвристика: заголовок раздела/приложения (для выделения в читалке). */
+private fun isDocHeader(b: DocBlock): Boolean {
+    if (b.clause != null) return false
+    val t = b.text.trim()
+    if (t.length > 70) return false
+    return Regex("^[IVXLC]+\\.\\s").containsMatchIn(t) ||
+        t.startsWith("Приложение") ||
+        t.startsWith("ПРАВИЛА") ||
+        t.startsWith("ИНСТРУКЦИЯ") ||
+        (t == t.uppercase() && t.length in 6..70)
 }
 
 @Composable
